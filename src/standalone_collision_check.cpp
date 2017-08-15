@@ -14,23 +14,24 @@ int main(int argc, char** argv) {
   robot_model_loader::RobotModelLoader robot_model_loader("robot_description");
   robot_model::RobotModelPtr kinematic_model = robot_model_loader.getModel();
   planning_scene::PlanningScene planning_scene(kinematic_model);
-  collision_detection::CollisionRequest collision_request;
-  collision_detection::CollisionResult collision_result;
   robot_state::RobotState robot_state = planning_scene.getCurrentState();
   collision_detection::AllowedCollisionMatrix acm = planning_scene.getAllowedCollisionMatrix();
 
-  ros::Duration(10).sleep();
   // Spawn a virtual collision object (for testing)
   spawn_collision_cube(nh);
 
   // Spin while checking minimum collision distance
   while ( ros::ok() )
   {
-    collision_result.clear();
-    robot_state = planning_scene.getCurrentState();
-    //planning_scene.checkCollision(collision_request, collision_result, robot_state, acm);
-    //ROS_INFO_STREAM("Current state is " << (collision_result.collision ? "in" : "not in") << " collision");
-    ROS_INFO_STREAM("Minimum distance is " << planning_scene.distanceToCollision( robot_state ) << ".");
+    //process collision objects in scene
+    moveit::planning_interface::PlanningSceneInterface planning_scene_interface_;
+    std::map<std::string, moveit_msgs::CollisionObject> c_objects_map = planning_scene_interface_.getObjects(); //error here
+    for(auto& kv : c_objects_map){
+      planning_scene.processCollisionObjectMsg(kv.second);
+    }
+
+  //print distance
+  ROS_INFO_STREAM("Distance to Collision: " << planning_scene.distanceToCollision(robot_state));
 
     ros::Duration(1.).sleep();
   }
