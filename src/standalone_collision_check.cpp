@@ -8,8 +8,6 @@ int main(int argc, char** argv) {
   ros::init (argc, argv, "collision_check");
   ros::NodeHandle nh;
 
-  ros::Duration(1.0).sleep();
-
   // Set up the MoveIt scene
   robot_model_loader::RobotModelLoader robot_model_loader("robot_description");
   robot_model::RobotModelPtr kinematic_model = robot_model_loader.getModel();
@@ -18,20 +16,22 @@ int main(int argc, char** argv) {
   collision_detection::AllowedCollisionMatrix acm = planning_scene.getAllowedCollisionMatrix();
 
   // Spawn a virtual collision object (for testing)
-  spawn_collision_cube(nh);
+  //spawn_collision_cube(nh);
 
   // Spin while checking minimum collision distance
   while ( ros::ok() )
   {
     //process collision objects in scene
     moveit::planning_interface::PlanningSceneInterface planning_scene_interface_;
-    std::map<std::string, moveit_msgs::CollisionObject> c_objects_map = planning_scene_interface_.getObjects(); //error here
+    std::map<std::string, moveit_msgs::CollisionObject> c_objects_map = planning_scene_interface_.getObjects();
     for(auto& kv : c_objects_map){
       planning_scene.processCollisionObjectMsg(kv.second);
     }
 
-  //print distance
+  ROS_INFO("");
   ROS_INFO_STREAM("Distance to Collision: " << planning_scene.distanceToCollision(robot_state));
+    ROS_INFO_STREAM("Is state colliding: " << planning_scene.isStateColliding());
+  ROS_INFO("");
 
     ros::Duration(1.).sleep();
   }
@@ -55,9 +55,9 @@ void spawn_collision_cube(ros::NodeHandle& nh)
   shape_msgs::SolidPrimitive primitive;
   primitive.type = primitive.BOX;
   primitive.dimensions.resize(3);
-  primitive.dimensions[0] = 0.05;
-  primitive.dimensions[1] = 0.05;
-  primitive.dimensions[2] = 0.05;
+  primitive.dimensions[0] = .2;
+  primitive.dimensions[1] = .2;
+  primitive.dimensions[2] = .2;
   collision_object.primitives.resize(1);
   collision_object.primitives[0] = primitive;
 
