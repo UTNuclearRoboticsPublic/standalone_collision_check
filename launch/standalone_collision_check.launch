@@ -1,0 +1,9 @@
+<launch>
+
+  <node name="collision_check" pkg="standalone_collision_check" type="standalone_collision_check" output="screen" >
+    <param name="test_with_cube" type="bool" value="false" />
+    <param name="test_with_random_joints" type="bool" value="false" />
+    <param name="num_joints" type="int" value="6" />
+  </node>
+
+</launch>
