@@ -7,6 +7,19 @@ int main(int argc, char** argv) {
 
   ros::init (argc, argv, "collision_check");
   ros::NodeHandle nh;
+
+  // Read string arguments from launch file, then convert to proper data types
+  ros::NodeHandle pn("~");
+  read_launch_args(pn);
+
+  // Send URscript commands
+  ros::Publisher vel_pub = nh.advertise<std_msgs::String>( g_ur_topic_name, 1);
+  while (vel_pub.getNumSubscribers() == 0)
+  {
+    ROS_INFO_STREAM("Waiting for URScript publisher creation");
+    ros::Duration(0.1).sleep();
+  }
+
   ros::Subscriber sub = nh.subscribe("joint_states", 5, jointCallback);
 
   robot_model_loader::RobotModelLoader robot_model_loader("robot_description");
@@ -14,16 +27,10 @@ int main(int argc, char** argv) {
   planning_scene::PlanningScene planning_scene(kinematic_model);
 
   collision_detection::CollisionRequest collision_request;
+  collision_request.group_name = g_group_name;
   collision_detection::CollisionResult collision_result;
 
   robot_state::RobotState& current_state = planning_scene.getCurrentStateNonConst();
-
-  // Send URscript commands
-  ros::Publisher vel_pub = nh.advertise<std_msgs::String>("/ur_driver/URScript", 1);
-
-  // Read string arguments from launch file, then convert to proper data types
-  ros::NodeHandle pn("~");
-  read_launch_args(pn);
 
   // Spawn a virtual collision object (for testing)
   if (g_test_with_cube)
@@ -32,45 +39,42 @@ int main(int argc, char** argv) {
   // Spin while checking minimum collision distance
   while ( ros::ok() )
   {
+    current_state.update();
+    ROS_INFO_STREAM( current_state.getJoints() );
+
+    /*
     //ROS_INFO_STREAM( g_current_joints.at(0) <<"  " << g_current_joints.at(1) );
-    current_state = planning_scene.getCurrentStateNonConst();
 
     // For testing: overwrite actual joint values with randoms
     if (g_test_with_random_joints)
       current_state.setToRandomPositions();
     else
       current_state.setVariablePositions(g_current_joints);
-
+    */
     collision_result.clear();
 
     planning_scene.checkCollision(collision_request, collision_result);
-    /*ROS_INFO_STREAM("Current state is "
-                  << (collision_result.collision ? "in" : "not in")
-                  << " collision"); */
 
-    // Bring the robot to a halt
-    // This is UR-specific
+    // Bring the robot to a halt and kill the joystick node
     if ( collision_result.collision )
     {
       ROS_WARN("[standalone_collision_check] Halting!");
 
+      std::string s = "rosnode kill " + g_node_to_kill;
+      system(s.c_str());
+
+      // This is specific to Universal Robots
       sprintf(g_ur_cmd, "Stop_l(%f)", g_deceleration);
       g_urscript_string.data = g_ur_cmd;
-
-      // Quickly pump out 'stop' commands.
-      // Essentially, overwhelm any other URScript commands going to the robot.
-      // This doesn't work for pendant commands, but yes for XBox cmds via URx.
-      while (ros::ok())
-      {
-        vel_pub.publish(g_urscript_string);
-        ros::Duration(0.005).sleep();
-      }
+      vel_pub.publish(g_urscript_string);
+      return 0;
     }
 
     ros::spinOnce();
     ros::Duration(.01).sleep();
   }
 
+  ros::shutdown();
   return 0;
 }
 
@@ -92,6 +96,7 @@ void spawn_collision_cube(ros::NodeHandle& nh)
   ros::Publisher collision_object_publisher = nh.advertise<moveit_msgs::CollisionObject>("collision_object", 1);
   while(collision_object_publisher.getNumSubscribers() < 1)
   {
+    ROS_INFO_STREAM("Waiting for collision_object publisher creation");
     ros::Duration(0.1).sleep();
   }
 
@@ -139,14 +144,35 @@ void read_launch_args(ros::NodeHandle& nh)
     ros::Duration(0.1).sleep();
   }
   nh.param<int>("num_joints", g_num_joints, 6);
+  while (!nh.hasParam("group_name"))
+  {
+    ros::Duration(0.1).sleep();
+  }
+  nh.param<std::string>("group_name", g_group_name, "manipulator");
+  while (!nh.hasParam("ur_topic_name"))
+  {
+    ros::Duration(0.1).sleep();
+  }
+  nh.param<std::string>("ur_topic_name", g_ur_topic_name, "/ur_driver/URScript");
+  while (!nh.hasParam("node_to_kill"))
+  {
+    ros::Duration(0.1).sleep();
+  }
+  nh.param<std::string>("node_to_kill", g_node_to_kill, "/joy_teleop/joy_node");
 
 
+  ROS_INFO_STREAM("----------------------------");
+  ROS_INFO_STREAM("----------------------------");
   ROS_INFO_STREAM("Configuration from launch file: ");
   ROS_INFO_STREAM("Number of joints: " << g_num_joints);
+  ROS_INFO_STREAM("MoveIt group to check: " << g_group_name);
+  ROS_INFO_STREAM("URScript topic: " << g_ur_topic_name);
   //ROS_INFO( "%d", g_test_with_cube );
   //ROS_INFO( "%d", g_test_with_random_joints );
   ROS_INFO_STREAM( (g_test_with_cube ? "test with virtual cube" : "no virtual collision cube will be added") );
   ROS_INFO_STREAM( (g_test_with_random_joints ? "test with random joints" : "use actual robot joints") );
+  ROS_INFO_STREAM("----------------------------");
+  ROS_INFO_STREAM("----------------------------");
 
   g_current_joints.resize(g_num_joints);
 
