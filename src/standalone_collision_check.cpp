@@ -34,9 +34,6 @@ int main(int argc, char** argv) {
   if (g_test_with_cube)
     spawn_collision_cube(nh);
 
-  std::vector<double> joint_values;
-  const robot_model::JointModelGroup* joint_model_group = current_state.getJointModelGroup(g_group_name);
-
   /////////////////////////////////////////////////
   // Spin while checking collisions
   /////////////////////////////////////////////////
@@ -48,15 +45,13 @@ int main(int argc, char** argv) {
       current_state.setToRandomPositions();
     else
     {
-      current_state.copyJointGroupPositions(joint_model_group, joint_values);
-      ROS_INFO_STREAM( joint_values.at(0) );
-      current_state.setJointGroupPositions(joint_model_group, joint_values);
+      current_state.setVariablePositions(g_current_joints);
     }
 
 
     // Are the joints being updated?
-    const double* left_ur5_shoulder_pan_joint = current_state.getJointPositions("left_ur5_shoulder_pan_joint");
-    ROS_INFO_STREAM( *left_ur5_shoulder_pan_joint );
+    const double* shoulder_pan_joint = current_state.getJointPositions("shoulder_pan_joint");
+    ROS_INFO_STREAM( *shoulder_pan_joint );
 
 
     collision_result.clear();
@@ -67,7 +62,7 @@ int main(int argc, char** argv) {
     if ( collision_result.collision )
     {
       ROS_WARN("[standalone_collision_check] Halting!");
-/*
+
       std::string s = "rosnode kill " + g_node_to_kill;
       system(s.c_str());
 
@@ -77,7 +72,6 @@ int main(int argc, char** argv) {
       vel_pub.publish(g_urscript_string);
 
       return 0;
-*/
     }
 
     ros::spinOnce();
