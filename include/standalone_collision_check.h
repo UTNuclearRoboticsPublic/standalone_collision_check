@@ -9,6 +9,7 @@
 // MoveIt!
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/kinematic_constraints/utils.h>
+#include <moveit/robot_model/joint_model.h>
 #include <moveit/robot_model_loader/robot_model_loader.h>
 #include <eigen_conversions/eigen_msg.h>
 

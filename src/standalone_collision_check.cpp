@@ -25,41 +25,49 @@ int main(int argc, char** argv) {
   robot_model_loader::RobotModelLoader robot_model_loader("robot_description");
   robot_model::RobotModelPtr kinematic_model = robot_model_loader.getModel();
   planning_scene::PlanningScene planning_scene(kinematic_model);
-
   collision_detection::CollisionRequest collision_request;
   collision_request.group_name = g_group_name;
   collision_detection::CollisionResult collision_result;
-
   robot_state::RobotState& current_state = planning_scene.getCurrentStateNonConst();
 
-  // Spawn a virtual collision object (for testing)
+  // Spawn a virtual collision object? (for testing)
   if (g_test_with_cube)
     spawn_collision_cube(nh);
 
-  // Spin while checking minimum collision distance
+  std::vector<double> joint_values;
+  const robot_model::JointModelGroup* joint_model_group = current_state.getJointModelGroup(g_group_name);
+
+  /////////////////////////////////////////////////
+  // Spin while checking collisions
+  /////////////////////////////////////////////////
   while ( ros::ok() )
   {
-    current_state.update();
-    ROS_INFO_STREAM( current_state.getJoints() );
-
-    /*
-    //ROS_INFO_STREAM( g_current_joints.at(0) <<"  " << g_current_joints.at(1) );
 
     // For testing: overwrite actual joint values with randoms
     if (g_test_with_random_joints)
       current_state.setToRandomPositions();
     else
-      current_state.setVariablePositions(g_current_joints);
-    */
-    collision_result.clear();
+    {
+      current_state.copyJointGroupPositions(joint_model_group, joint_values);
+      ROS_INFO_STREAM( joint_values.at(0) );
+      current_state.setJointGroupPositions(joint_model_group, joint_values);
+    }
 
+
+    // Are the joints being updated?
+    const double* left_ur5_shoulder_pan_joint = current_state.getJointPositions("left_ur5_shoulder_pan_joint");
+    ROS_INFO_STREAM( *left_ur5_shoulder_pan_joint );
+
+
+    collision_result.clear();
     planning_scene.checkCollision(collision_request, collision_result);
+
 
     // Bring the robot to a halt and kill the joystick node
     if ( collision_result.collision )
     {
       ROS_WARN("[standalone_collision_check] Halting!");
-
+/*
       std::string s = "rosnode kill " + g_node_to_kill;
       system(s.c_str());
 
@@ -67,7 +75,9 @@ int main(int argc, char** argv) {
       sprintf(g_ur_cmd, "Stop_l(%f)", g_deceleration);
       g_urscript_string.data = g_ur_cmd;
       vel_pub.publish(g_urscript_string);
+
       return 0;
+*/
     }
 
     ros::spinOnce();
