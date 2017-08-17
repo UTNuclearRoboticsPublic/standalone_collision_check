@@ -18,6 +18,9 @@ int main(int argc, char** argv) {
 
   robot_state::RobotState& current_state = planning_scene.getCurrentStateNonConst();
 
+  // Send URscript commands
+  ros::Publisher vel_pub = nh.advertise<std_msgs::String>("/ur_driver/URScript", 1);
+
   // Read string arguments from launch file, then convert to proper data types
   ros::NodeHandle pn("~");
   read_launch_args(pn);
@@ -41,12 +44,31 @@ int main(int argc, char** argv) {
     collision_result.clear();
 
     planning_scene.checkCollision(collision_request, collision_result);
-    ROS_INFO_STREAM("Current state is "
+    /*ROS_INFO_STREAM("Current state is "
                   << (collision_result.collision ? "in" : "not in")
-                  << " collision");
+                  << " collision"); */
+
+    // Bring the robot to a halt
+    // This is UR-specific
+    if ( collision_result.collision )
+    {
+      ROS_WARN("[standalone_collision_check] Halting!");
+
+      sprintf(g_ur_cmd, "Stop_l(%f)", g_deceleration);
+      g_urscript_string.data = g_ur_cmd;
+
+      // Quickly pump out 'stop' commands.
+      // Essentially, overwhelm any other URScript commands going to the robot.
+      // This doesn't work for pendant commands, but yes for XBox cmds via URx.
+      while (ros::ok())
+      {
+        vel_pub.publish(g_urscript_string);
+        ros::Duration(0.005).sleep();
+      }
+    }
 
     ros::spinOnce();
-    ros::Duration(.02).sleep();  // Spin at 50 Hz
+    ros::Duration(.01).sleep();
   }
 
   return 0;
@@ -87,7 +109,7 @@ void spawn_collision_cube(ros::NodeHandle& nh)
   collision_object.primitives[0] = primitive;
 
   geometry_msgs::Pose pose;
-  pose.position.x = 0.8;
+  pose.position.x = -0.4;
   pose.orientation.w = 1.0;
   collision_object.primitive_poses.resize(1);
   collision_object.primitive_poses[0] = pose;

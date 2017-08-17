@@ -3,7 +3,8 @@
 #define STANDALONE_COLLISION_CHECK_H
 
 #include <ros/ros.h>
-#include "std_msgs/Bool.h"
+//#include "std_msgs/Bool.h"
+#include "std_msgs/String.h"
 #include <string> 
 
 // MoveIt!
@@ -28,6 +29,11 @@ namespace standalone_collision_check
 
   bool g_test_with_cube = false;  // Read from launch file
   bool g_test_with_random_joints = false;  // Read from launch file
+
+  std_msgs::String g_urscript_string;
+
+  char g_ur_cmd [400];
+  double g_deceleration = 3.;  // How fast to stop
 }
 using namespace standalone_collision_check;
 
