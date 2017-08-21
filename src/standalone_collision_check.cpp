@@ -31,6 +31,7 @@ int main(int argc, char** argv) {
   collision_request.group_name = g_group_name;
   collision_detection::CollisionResult collision_result;
   robot_state::RobotState& current_state = planning_scene.getCurrentStateNonConst();
+  moveit::planning_interface::PlanningSceneInterface planning_scene_interface_;
 
   // Spawn a virtual collision object? (for testing)
   if (g_test_with_cube)
@@ -50,11 +51,17 @@ int main(int argc, char** argv) {
   while ( ros::ok() )
   {
 
-    // For testing: overwrite actual joint values with randoms
+    // Get joint angles
     if (g_test_with_random_joints)
       current_state.setToRandomPositions();
     else
       current_state.setVariablePositions(g_my_joint_info.position);
+
+    //process collision objects in scene
+    std::map<std::string, moveit_msgs::CollisionObject> c_objects_map = planning_scene_interface_.getObjects();
+    for(auto& kv : c_objects_map){
+      planning_scene.processCollisionObjectMsg(kv.second);
+    }
 
 
     collision_result.clear();
@@ -115,7 +122,7 @@ void standalone_collision_check::spawn_collision_cube(ros::NodeHandle& nh)
   ros::Publisher collision_object_publisher = nh.advertise<moveit_msgs::CollisionObject>("collision_object", 1, true);  // latch it
   while(collision_object_publisher.getNumSubscribers() < 1)
   {
-    ROS_INFO_STREAM("[standalone collision check] Waiting for collision_object publisher creation");
+    ROS_INFO_STREAM("[standalone collision check] Waiting for collision_object connections");
     ros::Duration(0.1).sleep();
   }
 
@@ -133,13 +140,15 @@ void standalone_collision_check::spawn_collision_cube(ros::NodeHandle& nh)
   collision_object.primitives[0] = primitive;
 
   geometry_msgs::Pose pose;
-  pose.position.x = -0.4;
+  pose.position.x = 0.2;
+  pose.position.z = 0.3;
   pose.orientation.w = 1.0;
   collision_object.primitive_poses.resize(1);
   collision_object.primitive_poses[0] = pose;
 
   collision_object.operation = collision_object.ADD;
   collision_object_publisher.publish( collision_object );
+  ros::Duration(0.005).sleep();
 
   return;
 }
