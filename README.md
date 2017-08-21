@@ -13,9 +13,9 @@ group_name: The MoveIt! group to monitor. Often "manipulator"
 
 ur_topic_name: If using a Universal Robot, publish on this topic to halt robot motion.
 
-test_with_cube: If true, spawn a virtual collision object for testing.
+test_with_cube: If true, spawn a virtual collision object for testing. Turn on the "Planning scene" plugin to see this cube in RViz.
 
-test_with_random_joints: Continuously check the collision state with random joint values. This almost ensures a collision state will occur, so it's a good way to test the collision logic.
+test_with_random_joints: Continuously check the collision state with random joint values. This almost ensures a collision state will occur quickly, so it's a good way to test the collision logic.
 
 # Tips
 You can add "padding" around the robot by increasing the scale of the stl files in the URDF, then rerunning moveit_setup_assistant.
