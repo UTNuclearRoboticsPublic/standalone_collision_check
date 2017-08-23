@@ -71,15 +71,27 @@ int main(int argc, char** argv) {
     // Bring the robot to a halt and optionally kill a process, e.g. joystick input
     if ( collision_result.collision )
     {
-      ROS_WARN("[standalone_collision_check] Halting!");
-
       if ( !g_kill_cmd.empty() )
         system(g_kill_cmd.c_str());
+
+      // This is a hack for Woodside. Communication via env. variables
+      system( "echo \"COLLISION_DETECTED=1\" >> /etc/environment" );
 
       // This is specific to Universal Robots
       sprintf(g_ur_cmd, "Stop_l(%f)", g_deceleration);
       g_urscript_string.data = g_ur_cmd;
       vel_pub.publish(g_urscript_string);
+
+      // Give time for another process to read the changed environment variable
+      ROS_WARN("[standalone_collision_check] Halting!");
+      ros::Duration(5).sleep();
+
+
+      // This is a hack for Woodside. Communication via env. variables
+      // Remove the environment variable we added to /etc/environment
+      // Requires copying a temporary file.
+      system("head -n -1 /etc/environment > ~/collision_temp.txt ; mv ~/collision_temp.txt /etc/environment");
+
 
       return 0;
     }
