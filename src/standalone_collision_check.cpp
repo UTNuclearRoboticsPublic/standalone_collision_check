@@ -1,6 +1,4 @@
 
-// Refer to http://docs.ros.org/indigo/api/moveit_tutorials/html/doc/pr2_tutorials/planning/src/doc/planning_scene_tutorial.html
-
 #include <standalone_collision_check.h>
 
 int main(int argc, char** argv) {
