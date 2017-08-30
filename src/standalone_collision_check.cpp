@@ -167,29 +167,35 @@ void standalone_collision_check::spawn_collision_cube(ros::NodeHandle& nh)
 // Read string arguments from launch file, then convert to proper data types
 void standalone_collision_check::read_launch_args(ros::NodeHandle& nh)
 {
+  ROS_INFO_STREAM("Reading launch file parameters.");
   while (!nh.hasParam("test_with_cube"))
   {
-    ros::Duration(0.1).sleep();
+    ros::Duration(0.5).sleep();
+    ROS_INFO_STREAM("Cannot read the 'test_with_cube' param from the launch file.");
   }
   nh.param<bool>("test_with_cube", g_test_with_cube, false);
   while (!nh.hasParam("test_with_random_joints"))
   {
-    ros::Duration(0.1).sleep();
+    ros::Duration(0.5).sleep();
+    ROS_INFO_STREAM("Cannot read the 'test_with_random_joints' param from the launch file.");
   }
   nh.param<bool>("test_with_random_joints", g_test_with_random_joints, false);
   while (!nh.hasParam("group_name"))
   {
-    ros::Duration(0.1).sleep();
+    ros::Duration(0.5).sleep();
+    ROS_INFO_STREAM("Cannot read the 'group_name' param from the launch file.");
   }
   nh.param<std::string>("group_name", g_group_name, "manipulator");
   while (!nh.hasParam("ur_topic_name"))
   {
-    ros::Duration(0.1).sleep();
+    ros::Duration(0.5).sleep();
+    ROS_INFO_STREAM("Cannot read the 'ur_topic_name' param from the launch file.");
   }
   nh.param<std::string>("ur_topic_name", g_ur_topic_name, "/ur_driver/URScript");
   while (!nh.hasParam("kill_cmd"))
   {
-    ros::Duration(0.1).sleep();
+    ros::Duration(0.5).sleep();
+    ROS_INFO_STREAM("Cannot read the 'kill_cmd' param from the launch file. Leave it as a blank string if it is not necessary.");
   }
   nh.param<std::string>("kill_cmd", g_kill_cmd, "/joy_teleop/joy_node");
 
