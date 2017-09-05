@@ -39,8 +39,8 @@ int main(int argc, char** argv) {
   while ( g_my_joint_info.position.size() < 1 )
   {
     ROS_INFO_STREAM("[standalone_collision_check] Waiting for initial joint_state msg");
-    ros::Duration(0.1).sleep();
     ros::spinOnce();
+    ros::Duration(0.1).sleep();
   }
   ROS_INFO_STREAM("[standalone collision check] Received the initial joint_state msg.");
 
@@ -106,11 +106,11 @@ void standalone_collision_check::jointCallback(sensor_msgs::JointStateConstPtr m
 
     // Make sure the joints are from the MoveGroup we care about
     // (This can be a problem for robots with 2 or more arms/ wheels, etc)
-    if ( msg->name.at(0) != g_joint_names.at(0) )
-        return;  // Wait for a new msg from the correct MoveGroup
+    if ( std::binary_search( g_joint_names.begin(), g_joint_names.end(), msg->name.at(0) ) )
+      return;  // Wait for a new msg from the correct MoveGroup
 
     // Now we're surely reading the correct joints
-    // Reset the global joints
+    // Reset the global joints variable
     g_my_joint_info.name.clear();
     g_my_joint_info.position.clear();
     g_my_joint_info.header = msg->header;
@@ -157,7 +157,7 @@ void standalone_collision_check::spawn_collision_cube(ros::NodeHandle& nh)
 
   geometry_msgs::Pose pose;
   pose.position.x = 0.2;
-  pose.position.z = 0.8;
+  pose.position.z = 0.3;
   pose.orientation.w = 1.0;
   collision_object.primitive_poses.resize(1);
   collision_object.primitive_poses[0] = pose;
@@ -173,7 +173,6 @@ void standalone_collision_check::spawn_collision_cube(ros::NodeHandle& nh)
 // Read string arguments from launch file, then convert to proper data types
 void standalone_collision_check::read_launch_args(ros::NodeHandle& nh)
 {
-  ROS_INFO_STREAM("Reading launch file parameters.");
   while (!nh.hasParam("test_with_cube"))
   {
     ros::Duration(0.5).sleep();

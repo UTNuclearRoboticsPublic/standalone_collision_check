@@ -3,7 +3,7 @@
   <node name="collision_check" pkg="standalone_collision_check" type="standalone_collision_check" output="screen" >
     <param name="test_with_cube" type="bool" value="true" />
     <param name="test_with_random_joints" type="bool" value="false" />
-    <param name="group_name" type="string" value="right_ur5" />
+    <param name="group_name" type="string" value="manipulator" />
     <param name="ur_topic_name" type="string" value="ur_driver/URScript" />
     <param name="kill_cmd" type="string" value="rosnode kill /joy_teleop/joy_node" />
   </node>
