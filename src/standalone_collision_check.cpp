@@ -18,7 +18,7 @@ int main(int argc, char** argv) {
     ros::Duration(0.1).sleep();
   }*/
 
-  ros::Subscriber sub = nh.subscribe("joint_states", 5, jointCallback);
+  ros::Subscriber sub = nh.subscribe("joint_states", 1, jointCallback);
 
   moveit::planning_interface::MoveGroup* move_group_ptr = new moveit::planning_interface::MoveGroup(g_group_name);
   g_joint_names = move_group_ptr -> getJointNames();
@@ -42,6 +42,7 @@ int main(int argc, char** argv) {
     ros::Duration(0.1).sleep();
     ros::spinOnce();
   }
+  ROS_INFO_STREAM("[standalone collision check] Received the initial joint_state msg.");
 
   /////////////////////////////////////////////////
   // Spin while checking collisions
@@ -53,14 +54,16 @@ int main(int argc, char** argv) {
     if (g_test_with_random_joints)
       current_state.setToRandomPositions();
     else
-      current_state.setVariablePositions(g_my_joint_info.position);
+    {
+      for (int i=0; i<g_my_joint_info.position.size(); i++)
+        current_state.setJointPositions( g_my_joint_info.name.at(i), &g_my_joint_info.position.at(i) );
+    }
 
     //process collision objects in scene
     std::map<std::string, moveit_msgs::CollisionObject> c_objects_map = planning_scene_interface_.getObjects();
     for(auto& kv : c_objects_map){
       planning_scene.processCollisionObjectMsg(kv.second);
     }
-
 
     collision_result.clear();
     planning_scene.checkCollision(collision_request, collision_result);
@@ -72,9 +75,6 @@ int main(int argc, char** argv) {
       if ( !g_kill_cmd.empty() )
         system(g_kill_cmd.c_str());
 
-      // This is a hack for Woodside. Communication via env. variables
-      system( "echo \"COLLISION_DETECTED=1\" >> /etc/environment" );
-
       // This is specific to Universal Robots
       sprintf(g_ur_cmd, "Stop_l(%f)", g_deceleration);
       g_urscript_string.data = g_ur_cmd;
@@ -83,13 +83,6 @@ int main(int argc, char** argv) {
       // Give time for another process to read the changed environment variable
       ROS_WARN("[standalone_collision_check] Halting!");
       ros::Duration(5).sleep();
-
-
-      // This is a hack for Woodside. Communication via env. variables
-      // Remove the environment variable we added to /etc/environment
-      // Requires copying a temporary file.
-      system("head -n -1 /etc/environment > ~/collision_temp.txt ; mv ~/collision_temp.txt /etc/environment");
-
 
       return 0;
     }
@@ -105,18 +98,31 @@ int main(int argc, char** argv) {
 
 void standalone_collision_check::jointCallback(sensor_msgs::JointStateConstPtr msg)
 {
+  int size = msg->name.size();
 
-  g_my_joint_info.name.clear();
-  g_my_joint_info.position.clear();
-
-  g_my_joint_info.header = msg->header;
-
-  for (unsigned int i = 0, size = msg->name.size(); i < size; ++i)
+  // Sometimes there can be >1 MoveGroup with different #'s of joints. Avoid indexing errors
+  if ( size == g_joint_names.size() )
   {
-    std::string name = msg->name.at(i);
-    if (std::find(g_joint_names.begin(), g_joint_names.end(), name) != g_joint_names.end()) {
-      g_my_joint_info.name.push_back(name);
-      g_my_joint_info.position.push_back(msg->position.at(i));
+
+    // Make sure the joints are from the MoveGroup we care about
+    // (This can be a problem for robots with 2 or more arms/ wheels, etc)
+    if ( msg->name.at(0) != g_joint_names.at(0) )
+        return;  // Wait for a new msg from the correct MoveGroup
+
+    // Now we're surely reading the correct joints
+    // Reset the global joints
+    g_my_joint_info.name.clear();
+    g_my_joint_info.position.clear();
+    g_my_joint_info.header = msg->header;
+
+    for (unsigned int i = 0; i < size; ++i)
+    {
+      std::string name = msg->name.at(i);
+      if (std::find(g_joint_names.begin(), g_joint_names.end(), name) != g_joint_names.end())
+      {
+        g_my_joint_info.name.push_back(name);
+        g_my_joint_info.position.push_back(msg->position.at(i));
+      }
     }
   }
   
@@ -151,7 +157,7 @@ void standalone_collision_check::spawn_collision_cube(ros::NodeHandle& nh)
 
   geometry_msgs::Pose pose;
   pose.position.x = 0.2;
-  pose.position.z = 0.3;
+  pose.position.z = 0.8;
   pose.orientation.w = 1.0;
   collision_object.primitive_poses.resize(1);
   collision_object.primitive_poses[0] = pose;
