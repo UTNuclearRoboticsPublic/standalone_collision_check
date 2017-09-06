@@ -21,7 +21,7 @@ int main(int argc, char** argv) {
   ros::Subscriber sub = nh.subscribe("joint_states", 1, jointCallback);
 
   moveit::planning_interface::MoveGroup* move_group_ptr = new moveit::planning_interface::MoveGroup(g_group_name);
-  g_joint_names = move_group_ptr -> getJointNames();
+  g_my_joint_info.name = move_group_ptr -> getJointNames();
   robot_model_loader::RobotModelLoader robot_model_loader("robot_description");
   robot_model::RobotModelPtr kinematic_model = robot_model_loader.getModel();
   planning_scene::PlanningScene planning_scene(kinematic_model);
@@ -30,6 +30,10 @@ int main(int argc, char** argv) {
   collision_detection::CollisionResult collision_result;
   robot_state::RobotState& current_state = planning_scene.getCurrentStateNonConst();
   moveit::planning_interface::PlanningSceneInterface planning_scene_interface_;
+
+  // Initialize the joint position vector
+  for (int i=0; i<g_my_joint_info.name.size(); i++)
+    g_my_joint_info.position.push_back(0.);
 
   // Spawn a virtual collision object? (for testing)
   if (g_test_with_cube)
@@ -98,33 +102,19 @@ int main(int argc, char** argv) {
 
 void standalone_collision_check::jointCallback(sensor_msgs::JointStateConstPtr msg)
 {
-  int size = msg->name.size();
 
-  // Sometimes there can be >1 MoveGroup with different #'s of joints. Avoid indexing errors
-  if ( size == g_joint_names.size() )
+  for (int i=0; i<g_my_joint_info.name.size(); i++)
   {
-
-    // Make sure the joints are from the MoveGroup we care about
-    // (This can be a problem for robots with 2 or more arms/ wheels, etc)
-    if ( std::binary_search( g_joint_names.begin(), g_joint_names.end(), msg->name.at(0) ) )
-      return;  // Wait for a new msg from the correct MoveGroup
-
-    // Now we're surely reading the correct joints
-    // Reset the global joints variable
-    g_my_joint_info.name.clear();
-    g_my_joint_info.position.clear();
-    g_my_joint_info.header = msg->header;
-
-    for (unsigned int i = 0; i < size; ++i)
+    ROS_INFO_STREAM( "msg: " << msg->name.at(i));
+    ROS_INFO_STREAM( "g_my_joint_info: " << g_my_joint_info.name.at(i));
+    if ( (std::find( g_my_joint_info.name.begin(), g_my_joint_info.name.end(), msg->name.at(i)) != g_my_joint_info.name.end() ))
     {
-      std::string name = msg->name.at(i);
-      if (std::find(g_joint_names.begin(), g_joint_names.end(), name) != g_joint_names.end())
-      {
-        g_my_joint_info.name.push_back(name);
-        g_my_joint_info.position.push_back(msg->position.at(i));
-      }
+      ROS_INFO_STREAM(msg->name.at(i));
+      ROS_INFO_STREAM( msg->position.at(i) );
+      g_my_joint_info.position.at(i) = msg->position.at(i);
     }
   }
+
   
   return;
 }

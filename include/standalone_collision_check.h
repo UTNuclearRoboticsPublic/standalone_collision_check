@@ -57,8 +57,6 @@ namespace standalone_collision_check
   void read_launch_args(ros::NodeHandle& nh);
 
 
-  std::vector<std::string> g_joint_names;
-
   std_msgs::String g_urscript_string;
 
   char g_ur_cmd [400];
