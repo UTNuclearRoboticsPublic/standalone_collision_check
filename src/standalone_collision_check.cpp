@@ -102,19 +102,6 @@ int main(int argc, char** argv) {
 
 void standalone_collision_check::jointCallback(sensor_msgs::JointStateConstPtr msg)
 {
-
-  for (int i=0; i<g_my_joint_info.name.size(); i++)
-  {
-    ROS_INFO_STREAM( "msg: " << msg->name[i]);
-    ROS_INFO_STREAM( "g_my_joint_info: " << g_my_joint_info.name[i]);
-    if ( (std::find( g_my_joint_info.name.begin(), g_my_joint_info.name.end(), msg->name[i]) != g_my_joint_info.name.end() ))
-    {
-      ROS_INFO_STREAM(msg->name[i]);
-      ROS_INFO_STREAM( msg->position[i] );
-      g_my_joint_info.position[i] = msg->position[i];
-    }
-  }
-
   // Store joints in a global variable
   for (int m=0; m<msg->name.size(); m++)
   {
@@ -129,7 +116,6 @@ void standalone_collision_check::jointCallback(sensor_msgs::JointStateConstPtr m
 NEXT_JOINT:
     ;
   }
-
   
   return;
 }
